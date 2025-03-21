@@ -7,14 +7,17 @@ public class Window extends JFrame {
 
     private final Panel panel;
 
-    public Window(int width, int heigth) {
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setTitle("PGRF1 2024/2025");
-        setVisible(true);
+    public Window() {
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        setTitle("UHK FIM PGRF : " + this.getClass().getName());
 
-        panel = new Panel(width, heigth);
-        add(panel);
+        panel = new Panel();
+
+        add(panel, BorderLayout.CENTER);
+        setVisible(true);
         pack();
+
+        setLocationRelativeTo(null);
 
         panel.setFocusable(true);
         panel.grabFocus();
@@ -23,4 +26,5 @@ public class Window extends JFrame {
     public Panel getPanel() {
         return panel;
     }
+
 }

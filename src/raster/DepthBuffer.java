@@ -1,45 +1,47 @@
 package raster;
 
-import java.util.Optional;
+public class DepthBuffer implements Raster<Double>{
 
-public class DepthBuffer implements Raster<Double> {
     private final double[][] buffer;
     private final int width, height;
+    private final double defaultValue;
 
     public DepthBuffer(int width, int height) {
-        this.buffer = new double[width][height];
         this.width = width;
         this.height = height;
-    }
-
-    @Override
-    public void setValue(int x, int y, Double value) {
-        // TODO: implementovat
-        // TODO: implementovat isInRaster
-    }
-
-    @Override
-    public Optional<Double> getValue(int x, int y) {
-        // TODO: implementovat
-        // TODO: implementovat isInRaster
-        //return Optional.empty();
-        return Optional.of(0.0);
-    }
-
-    @Override
-    public int getWidth() {
-        // TODO: implementovat
-        return 0;
-    }
-
-    @Override
-    public int getHeight() {
-        // TODO: implementovat
-        return 0;
+        this.buffer = new double[width][height];
+        this.defaultValue = 1;
     }
 
     @Override
     public void clear() {
-        // TODO: implementovat
+        for (int i = 0; i < width; i++) {
+            for(int j = 0; j < height; j++){
+                buffer[i][j] = defaultValue;
+            }
+        }
+    }
+
+    @Override
+    public void setDefaultValue(Double value) {}
+
+    @Override
+    public int getWidth() {
+        return width;
+    }
+
+    @Override
+    public int getHeight() {
+        return height;
+    }
+
+    @Override
+    public Double getValue(int x, int y) {
+        return buffer[x][y];
+    }
+
+    @Override
+    public void setValue(int x, int y, Double color) {
+        buffer[x][y] = color;
     }
 }

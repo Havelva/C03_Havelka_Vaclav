@@ -1,14 +1,18 @@
 package model;
 
 public class Part {
+    private final TopologyType type;
     private final int start;
     private final int count;
-    private final TopologyType type;
 
-    public Part(int start, int count, TopologyType type) {
+    public Part(TopologyType type, int start, int count) {
+        this.type = type;
         this.start = start;
         this.count = count;
-        this.type = type;
+    }
+
+    public TopologyType getType() {
+        return type;
     }
 
     public int getStart() {
@@ -17,9 +21,5 @@ public class Part {
 
     public int getCount() {
         return count;
-    }
-
-    public TopologyType getType() {
-        return type;
     }
 }

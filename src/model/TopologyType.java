@@ -1,6 +1,5 @@
 package model;
 
 public enum TopologyType {
-    POINTS, LINES, TRIANGLES
-    // TODO: další primitiva
+    POINTS, LINES, LINE_STRIP, TRIANGLE, TRIANGLE_STRIP
 }

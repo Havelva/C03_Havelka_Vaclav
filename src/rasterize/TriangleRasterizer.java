@@ -1,77 +1,87 @@
 package rasterize;
 
-import model.Line;
-import model.Vertex;
 import raster.ZBuffer;
+
 import shader.Shader;
+import model.Vertex;
 import transforms.Col;
-import transforms.Vec3D;
+import transforms.Point3D;
 import utils.Lerp;
 
 public class TriangleRasterizer {
     private final ZBuffer zBuffer;
-
-    // TODO: pouze pro debug
-    private final LineRasterizer lineRasterizer;
-
+    private final Lerp<Vertex> lerp;
     private Shader shader;
 
-    public TriangleRasterizer(ZBuffer zBuffer, LineRasterizer lineRasterizer, Shader shader) {
+    public TriangleRasterizer(ZBuffer zBuffer, Shader shader) {
         this.zBuffer = zBuffer;
-        this.lineRasterizer = lineRasterizer;
         this.shader = shader;
+        this.lerp = new Lerp<>();
     }
 
-    public void rasterize(Vertex a, Vertex b, Vertex c, Col color) {
-        // TODO: pouze pro debug
-        lineRasterizer.drawLine(new Line((int) a.getPosition().getX(), (int) a.getPosition().getY(), (int) b.getPosition().getX(), (int) b.getPosition().getY()));
-        lineRasterizer.drawLine(new Line((int) a.getPosition().getX(), (int) a.getPosition().getY(), (int) c.getPosition().getX(), (int) c.getPosition().getY()));
-        lineRasterizer.drawLine(new Line((int) b.getPosition().getX(), (int) b.getPosition().getY(), (int) c.getPosition().getX(), (int) c.getPosition().getY()));
+    public void rasterize(Vertex v1, Vertex v2, Vertex v3, boolean withTexture) {
+        v1 = new Vertex(new Point3D(v1.getPos().dehomog().get()), v1.getColor(), v1.getUv(), v1.getOne());
+        v2 = new Vertex(new Point3D(v2.getPos().dehomog().get()), v2.getColor(), v2.getUv(), v2.getOne());
+        v3 = new Vertex(new Point3D(v3.getPos().dehomog().get()), v3.getColor(), v3.getUv(), v3.getOne());
 
-        // TODO: transformace do okna obrazovky
-
-        int xA = (int) Math.round(a.getPosition().getX());
-        int yA = (int) Math.round(a.getPosition().getY());
-
-        int xB = (int) Math.round(b.getPosition().getX());
-        int yB = (int) Math.round(b.getPosition().getY());
-
-        int xC = (int) Math.round(c.getPosition().getX());
-        int yC = (int) Math.round(c.getPosition().getY());
-
-        // TODO: seřadit vrcholy od ymin po ymax
-
-        // První část trojúhelníku
-        // TODO: ořezání
-        Lerp<Vertex> lerp = new Lerp<>();
-        for (int y = yA; y <= yB; y++) {
-            double tAB = (y - yA) / (double) (yB - yA);
-            //int xAB = (int) Math.round((1 - tAB) * xA + tAB * xB);
-            // TODO: při interpolaci používat lerp, všude v projektu
-            // TODO: instanci lerp nechceme tady
-            Vertex ab = lerp.lerp(a, b, tAB);
+        Vertex a = transformToWindow(v1);
+        Vertex b = transformToWindow(v2);
+        Vertex c = transformToWindow(v3);
 
 
-            double tAC = (y - yA) / (double) (yC - yA);
-            //int xAC = (int) Math.round((1 - tAC) * xA + tAC * xC);
-            Vertex ac = lerp.lerp(a, c, tAC);
+        if (a.getPos().getY() > b.getPos().getY()) {
+            Vertex temp = a; a = b; b = temp;
+        }
+        if (b.getPos().getY() > c.getPos().getY()) {
+            Vertex temp = b; b = c; c = temp;
+        }
+        if (a.getPos().getY() > b.getPos().getY()) {
+            Vertex temp = a; a = b; b = temp;
+        }
 
-            // for cyklus od x do x
-            // TODO: pozor xAC může být menší než xAB
-            // TODO: ořezání
-            for (int x = (int)ac.getPosition().getX(); x <= (int)ab.getPosition().getX(); x++) {
-                double t = (x - ac.getPosition().getX()) / (ab.getPosition().getX() - ac.getPosition().getX());
-                Vertex pixel = lerp.lerp(ac, ab, t);
-                // TODo: dopočítat z
-                zBuffer.setPixelWithZTest(x, y, pixel.getPosition().getZ(), shader.getColor(pixel));
+        //crop by y
+        for (int y = Math.max(a.getIntY(), 0); y <= Math.min(b.getIntY(), zBuffer.getHeight()-1); y++) {
+
+            double tAB = (y-a.getIntY())/(double)(b.getIntY()-a.getIntY());
+            Vertex AB = lerp.lerp(a, b, tAB);
+            double tAC = (y-a.getIntY())/(double)(c.getIntY()-a.getIntY());
+            Vertex AC = lerp.lerp(a, c, tAC);
+
+            if (AB.getIntX() > AC.getIntX()) {
+                Vertex temp = AB; AB = AC; AC = temp;
             }
 
-            // TODO: udělat druhu část trojúhelníku
+            //crop by x
+            for (int x = Math.max(AB.getIntX(), 0); x <= Math.min(AC.getIntX(), zBuffer.getWidth()-1); x++) {
+                double t = (x-AB.getIntX())/(double)(AC.getIntX()-AB.getIntX());
+                Vertex finalVertex = lerp.lerp(AB, AC, t);
+                if(withTexture) zBuffer.setPixelWithZTest(x,y,finalVertex.getPos().getZ(), shader.getColor(finalVertex));
+                else zBuffer.setPixelWithZTest(x,y,finalVertex.getPos().getZ(), finalVertex.getColor());
+            }
+        }
 
+        for (int y = Math.max(b.getIntY(), 0); y <= Math.min(c.getIntY(), zBuffer.getHeight()-1); y++) {
+
+            double tBC = (y-b.getIntY())/(double)(c.getIntY()-b.getIntY());
+            Vertex BC = lerp.lerp(b, c, tBC);
+            double tAC = (y-a.getIntY())/(double)(c.getIntY()-a.getIntY());
+            Vertex AC = lerp.lerp(a, c, tAC);
+
+            if (BC.getIntX() > AC.getIntX()) {
+                Vertex temp = BC; BC = AC; AC = temp;
+            }
+
+            for (int x = Math.max(BC.getIntX(), 0); x < Math.min(AC.getIntX(), zBuffer.getWidth()-1); x++) {
+                double t = (x-BC.getIntX())/(double)(AC.getIntX()-BC.getIntX());
+                Vertex finalVertex = lerp.lerp(BC, AC, t);
+                if(withTexture) zBuffer.setPixelWithZTest(x,y,finalVertex.getPos().getZ(), shader.getColor(finalVertex));
+                else zBuffer.setPixelWithZTest(x,y,finalVertex.getPos().getZ(), finalVertex.getColor());
+            }
         }
     }
-
-    public void setShader(Shader shader) {
-        this.shader = shader;
+    private Vertex transformToWindow(Vertex v){
+        return v.mulPos(new Point3D(1, -1, 1))
+                .addPos(new Point3D(1, 1, 0))
+                .mulPos(new Point3D((double) (zBuffer.getWidth() - 1) /2, (double) (zBuffer.getHeight() - 1) /2, 1));
     }
 }

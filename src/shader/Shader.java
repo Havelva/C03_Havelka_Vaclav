@@ -1,8 +1,8 @@
 package shader;
-import transforms.Col;
-import model.Vertex;
 
-@FunctionalInterface
+import model.Vertex;
+import transforms.Col;
+
 public interface Shader {
-    Col getColor(Vertex pixel);
+    Col getColor(Vertex v);
 }

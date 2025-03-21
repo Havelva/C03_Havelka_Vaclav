@@ -1,9 +1,14 @@
 import controller.Controller3D;
 import view.Window;
-
+import javax.swing.*;
 public class Main {
     public static void main(String[] args) {
-        Window window = new Window(800, 600);
-        new Controller3D(window.getPanel());
+        SwingUtilities.invokeLater(() -> {
+            Window window = new Window();
+            new Controller3D(window.getPanel());
+            window.setVisible(true);
+        });
+        // https://www.google.com/search?q=SwingUtilities.invokeLater
+        // https://www.javamex.com/tutorials/threads/invokelater.shtml
     }
 }
