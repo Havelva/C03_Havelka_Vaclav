@@ -17,50 +17,58 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
+/**
+ * Třída Controller3D implementuje rozhraní Controller a slouží k ovládání 3D scény.
+ */
 public class Controller3D implements Controller {
-    private final Panel panel;
-    private ZBuffer zBuffer;
-    private TriangleRasterizer triangleRasterizer;
+    private final Panel panel; // Panel pro vykreslování
+    private ZBuffer zBuffer; // Z-buffer pro správu hloubky
+    private TriangleRasterizer triangleRasterizer; // Rasterizátor trojúhelníků
 
-    private LineRasterizer lineRasterizer;
-    private Renderer renderer;
-    private BufferedImage texture;
-    private Camera camera;
-    private ArrayList<Vertex> centers;
-    private ArrayList<Solid> solids;
-    private int selectedSolidIndex;
-    private int mouseDraggedStartX, mouseDraggedStartY;
-    private Mat4 proj;
+    private LineRasterizer lineRasterizer; // Rasterizátor čar
+    private Renderer renderer; // Renderer pro vykreslování
+    private BufferedImage texture; // Textura pro vykreslování
+    private Camera camera; // Kamera pro pohled na scénu
+    private ArrayList<Vertex> centers; // Seznam středů objektů
+    private ArrayList<Solid> solids; // Seznam objektů ve scéně
+    private int selectedSolidIndex; // Index vybraného objektu
+    private int mouseDraggedStartX, mouseDraggedStartY; // Počáteční pozice myši při tažení
+    private Mat4 proj; // Projekční matice
 
-
+    /**
+     * Konstruktor třídy Controller3D.
+     * @param panel Panel pro vykreslování
+     */
     public Controller3D(Panel panel) {
         this.panel = panel;
-        initObjects(panel.getRaster());
-        initListeners();
-        redraw();
+        initObjects(panel.getRaster()); // Inicializace objektů
+        initListeners(); // Inicializace posluchačů událostí
+        redraw(); // Překreslení scény
     }
 
+    /**
+     * Inicializace objektů ve scéně.
+     * @param raster Raster pro vykreslování
+     */
     public void initObjects(Raster<Col> raster) {
-        raster.setDefaultValue(new Col(Color.black.getRGB()));
-        zBuffer = new ZBuffer(raster);
+        raster.setDefaultValue(new Col(Color.black.getRGB())); // Nastavení výchozí barvy rasteru
+        zBuffer = new ZBuffer(raster); // Inicializace Z-bufferu
         try {
-            texture = ImageIO.read(new File("./res/texture.jpg"));
+            texture = ImageIO.read(new File("./res/texture.jpg")); // Načtení textury
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(e); // Ošetření výjimky při načítání textury
         }
         triangleRasterizer = new TriangleRasterizer(zBuffer, v -> {
-            Vec2D vec = v.getUv().mul(1 / v.getOne());
-            int x = (int) (vec.getX() * texture.getWidth());
-            int y = (int) (vec.getY() * texture.getHeight());
-            return new Col(texture.getRGB(x, y));
+            Vec2D vec = v.getUv().mul(1 / v.getOne()); // Výpočet UV souřadnic
+            int x = (int) (vec.getX() * texture.getWidth()); // Výpočet X souřadnice textury
+            int y = (int) (vec.getY() * texture.getHeight()); // Výpočet Y souřadnice textury
+            return new Col(texture.getRGB(x, y)); // Vrácení barvy z textury
         });
 
+        lineRasterizer = new LineRasterizer(zBuffer); // Inicializace rasterizátoru čar
+        renderer = new Renderer(triangleRasterizer, lineRasterizer, panel); // Inicializace rendereru
 
-        lineRasterizer = new LineRasterizer(zBuffer);
-        renderer = new Renderer(triangleRasterizer, lineRasterizer, panel);
-
-
-        Vec3D pos = new Vec3D(0, 0, 0);
+        Vec3D pos = new Vec3D(0, 0, 0); // Počáteční pozice kamery
         camera = new Camera(pos,
                 Math.toRadians(90),
                 Math.toRadians(-100),
@@ -71,28 +79,31 @@ public class Controller3D implements Controller {
                 (double) raster.getHeight() / raster.getWidth(),
                 0.2, 20
         );
-        solids = new ArrayList<>();
-        Cube cube = new Cube();
-        Triangl triangl = new Triangl();
-        CubicTriangl cubicTriangl = new CubicTriangl();
-        AxisX axisX = new AxisX();
-        AxisY axisY = new AxisY();
-        AxisZ axisZ = new AxisZ();
-        solids.add(cube);
-        solids.add(triangl);
-        solids.add(cubicTriangl);
-        solids.add(axisX);
-        solids.add(axisY);
-        solids.add(axisZ);
+        solids = new ArrayList<>(); // Inicializace seznamu objektů
+        Cube cube = new Cube(); // Vytvoření krychle
+        Triangl triangl = new Triangl(); // Vytvoření trojúhelníku
+        CubicTriangl cubicTriangl = new CubicTriangl(); // Vytvoření kubického trojúhelníku
+        AxisX axisX = new AxisX(); // Vytvoření osy X
+        AxisY axisY = new AxisY(); // Vytvoření osy Y
+        AxisZ axisZ = new AxisZ(); // Vytvoření osy Z
+        solids.add(cube); // Přidání krychle do seznamu objektů
+        solids.add(triangl); // Přidání trojúhelníku do seznamu objektů
+        solids.add(cubicTriangl); // Přidání kubického trojúhelníku do seznamu objektů
+        solids.add(axisX); // Přidání osy X do seznamu objektů
+        solids.add(axisY); // Přidání osy Y do seznamu objektů
+        solids.add(axisZ); // Přidání osy Z do seznamu objektů
     }
 
+    /**
+     * Inicializace posluchačů událostí.
+     */
     @Override
     public void initListeners() {
         panel.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                panel.resize();
-                initObjects(panel.getRaster());
+                panel.resize(); // Změna velikosti panelu
+                initObjects(panel.getRaster()); // Inicializace objektů při změně velikosti
             }
         });
 
@@ -100,152 +111,155 @@ public class Controller3D implements Controller {
             @Override
             public void keyPressed(KeyEvent e){
                 if(e.getKeyCode() == KeyEvent.VK_A){
-                    //camera move left
+                    // Pohyb kamery doleva
                     camera = camera.left(0.05);
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_D) {
-                    //camera move right
+                    // Pohyb kamery doprava
                     camera = camera.right(0.05);
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_W) {
-                    //camera move up
+                    // Pohyb kamery nahoru
                     camera = camera.up(0.05);
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_S) {
-                    //camera move down
+                    // Pohyb kamery dolů
                     camera = camera.down(0.05);
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_Q) {
-                    //camera zoom in
+                    // Přiblížení kamery
                     camera = camera.forward(0.05);
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_E) {
-                    //camera zoom out
+                    // Oddálení kamery
                     camera = camera.backward(0.05);
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_T) {
-                    //camera rotate over
+                else if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    // Rotace kamery nahoru
                     camera = camera.addZenith(Math.toRadians(5));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_F) {
-                    //camera rotate left
+                else if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+                    // Rotace kamery doleva
                     camera = camera.addAzimuth(Math.toRadians(5));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_G) {
-                    //camera rotate under
+                else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    // Rotace kamery dolů
                     camera = camera.addZenith(Math.toRadians(-5));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_H) {
-                    //camera rotate right
+                else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                    // Rotace kamery doprava
                     camera = camera.addAzimuth(Math.toRadians(-5));
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_I) {
-                    //solid move up
+                    // Pohyb objektu nahoru
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4Transl(0, 0.05, 0)));
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_J) {
-                    //solid move left
+                    // Pohyb objektu doleva
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4Transl(-0.05, 0, 0)));
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_L) {
-                    //solid move right
+                    // Pohyb objektu doprava
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4Transl(0.05, 0, 0)));
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_K) {
-                    //solid move down
+                    // Pohyb objektu dolů
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4Transl(0, -0.05, 0)));
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_U) {
-                    //solid move forward
+                    // Pohyb objektu dopředu
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4Transl(0, 0, 0.05)));
                 }
                 else if (e.getKeyCode() == KeyEvent.VK_O) {
-                    //solid move backward
+                    // Pohyb objektu dozadu
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4Transl(0, 0, -0.05)));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_DELETE) {
-                    //rotation Y left
+                else if (e.getKeyCode() == KeyEvent.VK_1) {
+                    // Rotace objektu kolem osy Y doleva
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4RotY(Math.toRadians(-5))));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_PAGE_DOWN) {
-                    //rotation Y right
+                else if (e.getKeyCode() == KeyEvent.VK_2) {
+                    // Rotace objektu kolem osy Y doprava
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4RotY(Math.toRadians(5))));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_HOME) {
-                    //rotation X backward
+                else if (e.getKeyCode() == KeyEvent.VK_3) {
+                    // Rotace objektu kolem osy X dozadu
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4RotX(Math.toRadians(-5))));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_END) {
-                    //rotation X forward
+                else if (e.getKeyCode() == KeyEvent.VK_4) {
+                    // Rotace objektu kolem osy X dopředu
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4RotX(Math.toRadians(5))));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_INSERT) {
-                    //rotation Z left
+                else if (e.getKeyCode() == KeyEvent.VK_5) {
+                    // Rotace objektu kolem osy Z doleva
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4RotZ(Math.toRadians(5))));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_PAGE_UP) {
-                    //rotation Z right
+                else if (e.getKeyCode() == KeyEvent.VK_6) {
+                    // Rotace objektu kolem osy Z doprava
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4RotZ(Math.toRadians(-5))));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_M) {
-                    //zoom in
+                else if (e.getKeyCode() == KeyEvent.VK_7) {
+                    // Přiblížení objektu
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4Scale(1.1)));
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_N) {
-                    //zoom out
+                else if (e.getKeyCode() == KeyEvent.VK_8) {
+                    // Oddálení objektu
                     solids.get(selectedSolidIndex).setModel(solids.get(selectedSolidIndex).getModel().mul(new Mat4Scale(0.9)));
                 }
-                redraw();
+                redraw(); // Překreslení scény
             }
         });
 
         MouseAdapter mouseAdapter = new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                mouseDraggedStartX = e.getX();
-                mouseDraggedStartY = e.getY();
+                mouseDraggedStartX = e.getX(); // Uložení počáteční X pozice myši
+                mouseDraggedStartY = e.getY(); // Uložení počáteční Y pozice myši
             }
 
             @Override
             public void mouseDragged(MouseEvent e) {
-                double dX = e.getX() - mouseDraggedStartX;
-                double dY = e.getY() - mouseDraggedStartY;
-                camera = camera.addAzimuth(Math.PI*(dX / panel.getWidth())/3);
-                camera = camera.addZenith(Math.PI*(dY / panel.getHeight())/3);
-                redraw();
-                mouseDraggedStartX = e.getX();
-                mouseDraggedStartY = e.getY();
+                double dX = e.getX() - mouseDraggedStartX; // Výpočet rozdílu X pozice myši
+                double dY = e.getY() - mouseDraggedStartY; // Výpočet rozdílu Y pozice myši
+                camera = camera.addAzimuth(Math.PI*(dX / panel.getWidth())/3); // Rotace kamery podle X
+                camera = camera.addZenith(Math.PI*(dY / panel.getHeight())/3); // Rotace kamery podle Y
+                redraw(); // Překreslení scény
+                mouseDraggedStartX = e.getX(); // Aktualizace počáteční X pozice myši
+                mouseDraggedStartY = e.getY(); // Aktualizace počáteční Y pozice myši
             }
 
             @Override
             public void mouseClicked(MouseEvent e) {
-                double dist = Integer.MAX_VALUE;
-                int index = 0;
+                double dist = Integer.MAX_VALUE; // Inicializace nejmenší vzdálenosti
+                int index = 0; // Inicializace indexu nejbližšího objektu
                 for(int i = 0; i < centers.size(); i++){
-                    double dx = e.getX()-centers.get(i).getPos().getX();
-                    double dy = e.getY()-centers.get(i).getPos().getY();
+                    double dx = e.getX()-centers.get(i).getPos().getX(); // Výpočet rozdílu X pozice
+                    double dy = e.getY()-centers.get(i).getPos().getY(); // Výpočet rozdílu Y pozice
                     if((dx + dy) < dist){
-                        index = i;
-                        dist = dx + dy;
+                        index = i; // Aktualizace indexu nejbližšího objektu
+                        dist = dx + dy; // Aktualizace nejmenší vzdálenosti
                     }
                 }
-                selectedSolidIndex = index;
+                selectedSolidIndex = index; // Nastavení indexu vybraného objektu
             }
         };
-        panel.addMouseListener(mouseAdapter);
-        panel.addMouseMotionListener(mouseAdapter);
+        panel.addMouseListener(mouseAdapter); // Přidání posluchače myši
+        panel.addMouseMotionListener(mouseAdapter); // Přidání posluchače pohybu myši
     }
 
+    /**
+     * Překreslení scény.
+     */
     private void redraw() {
-        panel.clear();
-        zBuffer.clearDepth();
-        renderer.setView(camera.getViewMatrix());
-        System.out.println("Azimuth: "+Math.toDegrees(camera.getAzimuth()));
-        System.out.println("Zenith: "+Math.toDegrees(camera.getZenith()));
-        renderer.setProj(proj);
-        renderer.setCenters(solids);
-        centers = renderer.getCenters(solids);
-        renderer.render(solids);
-        panel.repaint();
+        panel.clear(); // Vyčištění panelu
+        zBuffer.clearDepth(); // Vyčištění Z-bufferu
+        renderer.setView(camera.getViewMatrix()); // Nastavení pohledu kamery
+        System.out.println("Azimuth: "+Math.toDegrees(camera.getAzimuth())); // Výpis azimutu kamery
+        System.out.println("Zenith: "+Math.toDegrees(camera.getZenith())); // Výpis zenitu kamery
+        renderer.setProj(proj); // Nastavení projekční matice
+        renderer.setCenters(solids); // Nastavení středů objektů
+        centers = renderer.getCenters(solids); // Získání středů objektů
+        renderer.render(solids); // Vykreslení objektů
+        panel.repaint(); // Překreslení panelu
     }
 }

@@ -1,5 +1,6 @@
 package render;
 
+// Importy potřebných tříd
 import rasterize.LineRasterizer;
 import rasterize.TriangleRasterizer;
 import model.Part;
@@ -9,33 +10,35 @@ import transforms.*;
 import utils.Lerp;
 import view.Panel;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
+// Třída Renderer slouží k vykreslování 3D objektů
 public class Renderer {
-    private final TriangleRasterizer triangleRasterizer;
-    private final LineRasterizer lineRasterizer;
-    private final Lerp<Vertex> lerp;
-    private final Panel panel;
+    private final TriangleRasterizer triangleRasterizer; // Rasterizátor trojúhelníků
+    private final LineRasterizer lineRasterizer; // Rasterizátor čar
+    private final Lerp<Vertex> lerp; // Lineární interpolátor pro vrcholy
+    private final Panel panel; // Panel pro vykreslování
 
-    private Mat4 view;
-    private Mat4 proj;
+    private Mat4 view; // Matice pohledu
+    private Mat4 proj; // Projekční matice
 
+    // Konstruktor třídy Renderer
     public Renderer(TriangleRasterizer triangleRasterizer, LineRasterizer lineRasterizer, Panel panel) {
         this.triangleRasterizer = triangleRasterizer;
         this.lineRasterizer = lineRasterizer;
         this.panel = panel;
         this.lerp = new Lerp<>();
-        this.view = new Mat4Identity();
-        this.proj = new Mat4Identity();
+        this.view = new Mat4Identity(); // Inicializace matice pohledu jako jednotkové matice
+        this.proj = new Mat4Identity(); // Inicializace projekční matice jako jednotkové matice
     }
 
+    // Metoda pro vykreslení jednoho objektu typu Solid
     public void render(Solid solid){
-        for(Part part : solid.getPartBuffer()){
+        for(Part part : solid.getPartBuffer()){ // Pro každý díl objektu
             int startIndex;
-            Mat4 mat = solid.getModel().mul(view).mul(proj);
-            switch (part.getType()){
+            Mat4 mat = solid.getModel().mul(view).mul(proj); // Výpočet transformační matice
+            switch (part.getType()){ // Podle typu dílu
                 case POINTS:
                     break;
                 case LINES:
@@ -51,7 +54,7 @@ public class Renderer {
                             a = new Vertex(a.getPos().mul(view).mul(proj), a.getColor(), a.getUv(), a.getOne());
                             b = new Vertex(b.getPos().mul(view).mul(proj), b.getColor(), b.getUv(), b.getOne());
                         }
-                        clipLine(a, b);
+                        clipLine(a, b); // Ořezání a vykreslení čáry
                         startIndex+=2;
                     }
                     break;
@@ -73,7 +76,7 @@ public class Renderer {
                             b = new Vertex(b.getPos().mul(mat), b.getColor(), b.getUv(), b.getOne());
                             c = new Vertex(c.getPos().mul(mat), c.getColor(), c.getUv(), c.getOne());
                         }
-                        clipTriangle(a, b, c, solid.withTexture());
+                        clipTriangle(a, b, c, solid.withTexture()); // Ořezání a vykreslení trojúhelníku
                         startIndex+=3;
                     }
                     break;
@@ -83,14 +86,15 @@ public class Renderer {
         }
     }
 
+    // Metoda pro vykreslení seznamu objektů typu Solid
     public void render(List<Solid> solids){
         for(Solid solid : solids){
             render(solid);
         }
     }
 
+    // Metoda pro ořezání a vykreslení trojúhelníku
     private void clipTriangle(Vertex a, Vertex b, Vertex c, boolean withTexture){
-
         if ((!((-a.getW()) <= a.getIntX() && a.getIntX() <= a.getW())
                 && !((-a.getW()) <= a.getIntY() && a.getIntY() <= a.getW())
                 && !(0 <= a.getPos().getZ() && a.getPos().getZ() <= a.getW()))
@@ -131,6 +135,7 @@ public class Renderer {
         triangleRasterizer.rasterize(a, b, c, withTexture);
     }
 
+    // Metoda pro ořezání a vykreslení čáry
     private void clipLine(Vertex a, Vertex b){
         if ((!((-a.getW()) <= a.getIntX() && a.getIntX() <= a.getW())
                 && !((-a.getW()) <= a.getIntY() && a.getIntY() <= a.getW())
@@ -152,16 +157,17 @@ public class Renderer {
         lineRasterizer.rasterize(a, b);
     }
 
+    // Metoda pro nastavení středů objektů
     public void setCenters(List<Solid> solids){
         for(Solid solid : solids){
             if(!solid.isAxis()){
                 Vertex center = solid.getCenter();
                 solid.setCenter(new Vertex(center.getPos().mul(solid.getModel()).mul(view).mul(proj), null, null, 0));
-
             }
         }
     }
 
+    // Metoda pro získání středů objektů
     public ArrayList<Vertex> getCenters(List<Solid> solids){
         ArrayList<Vertex> centers = new ArrayList<>();
         for(Solid solid : solids){
@@ -174,16 +180,19 @@ public class Renderer {
         return centers;
     }
 
+    // Metoda pro transformaci vrcholu do okna
     private Vertex transformToWindow(Vertex v){
         return v.mulPos(new Point3D(1, -1, 1))
                 .addPos(new Point3D(1, 1, 0))
                 .mulPos(new Point3D((double) (panel.getWidth() - 1) /2, (double) (panel.getHeight() - 1) /2, 1));
     }
 
+    // Metoda pro nastavení matice pohledu
     public void setView(Mat4 view) {
         this.view = view;
     }
 
+    // Metoda pro nastavení projekční matice
     public void setProj(Mat4 proj) {
         this.proj = proj;
     }

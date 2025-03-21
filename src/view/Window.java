@@ -3,6 +3,21 @@ package view;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * Třída Window rozšiřuje JFrame a představuje hlavní okno aplikace.
+ * 
+ * <p>
+ * Tato třída nastavuje základní vlastnosti okna, jako je název, 
+ * výchozí operace při zavření a umístění. Obsahuje také instanci 
+ * třídy Panel, která je přidána do středu okna.
+ * </p>
+ * 
+ * <p>
+ * Metoda {@link #getPanel()} vrací instanci třídy Panel.
+ * </p>
+ * 
+ * @author Vaclav
+ */
 public class Window extends JFrame {
 
     private final Panel panel;
