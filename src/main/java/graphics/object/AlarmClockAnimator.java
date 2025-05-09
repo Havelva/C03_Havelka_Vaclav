@@ -14,8 +14,15 @@ public class AlarmClockAnimator {
 
     // Ringing animation parameters
     private boolean isRinging = false;
-    private float ringMaxAngle = 1.5f; // Max rotation angle in degrees for shake
-    private float ringFrequency = 15.0f; // Oscillations per second (Hz) for shake
+
+    // New parameters for improved ringing animation
+    private float ringPhase = 0.0f;
+    private float ringVisualFrequency = 8.0f; // Visual frequency of the shake in Hz (cycles per simulated second)
+    private float ringMaxAngleZ = 6.0f;     // Max rotation angle in degrees for Z-axis shake (twist)
+    private float ringMaxAngleX = 4.0f;     // Max rotation angle in degrees for X-axis shake (nod)
+    
+    private double lastSecondsDelta = NORMAL_SPEED_SECONDS_PER_FRAME; // Stores the delta of the last time update
+
 
     static final double FAST_FORWARD_SECONDS_PER_FRAME = 1.0;
     static final double SLOW_MOTION_SECONDS_PER_FRAME = 0.01;
@@ -37,6 +44,7 @@ public class AlarmClockAnimator {
     public void getNow() {
         if (!isPaused) {
             time = LocalTime.now();
+            this.lastSecondsDelta = NORMAL_SPEED_SECONDS_PER_FRAME; // For actual time, ring updates at normal speed
             // If time was null and we just set it, and we are resuming, ensure resumingAtNormalRate is false
             // to avoid advancing time immediately after getting LocalTime.now() if unpausing to real time.
             // This logic is subtle. If unpausing to "Real Time (Resumed)", advanceTime is called.
@@ -50,7 +58,10 @@ public class AlarmClockAnimator {
             getNow(); // Initialize if null
         }
         if (!isPaused) {
-            this.time = this.time.plusNanos((long)(secondsDelta * 1_000_000_000L));
+            if (this.time != null) { // Ensure time is not null before advancing
+                this.time = this.time.plusNanos((long)(secondsDelta * 1_000_000_000L));
+                this.lastSecondsDelta = secondsDelta; // Store the delta used for this advancement
+            }
         }
     }
 
@@ -115,14 +126,27 @@ public class AlarmClockAnimator {
      * @param gl The GL2 context.
      */
     public void applyRingTransformation(GL2 gl) {
-        if (isRinging && time != null) {
-            // Calculate oscillation based on current time (seconds + nanoseconds part)
-            // This makes the shake continuous and respects pause/FF/SM
-            double totalSecondsInCurrentSecond = time.getSecond() + time.getNano() * 1e-9;
-            float currentRingAngle = ringMaxAngle * (float) Math.sin(totalSecondsInCurrentSecond * 2.0 * Math.PI * ringFrequency);
+        if (isRinging) {
+            float deltaTimeForRingThisFrame = 0.0f;
+            if (!isPaused) {
+                deltaTimeForRingThisFrame = (float)this.lastSecondsDelta;
+            }
 
-            // Apply a rotation for the shake effect. Shaking around Z-axis (twist).
-            gl.glRotatef(currentRingAngle, 0.0f, 0.0f, 1.0f);
+            // Increment phase based on the effective delta time for this frame.
+            ringPhase += (2.0f * (float)Math.PI * ringVisualFrequency) * deltaTimeForRingThisFrame;
+            
+            // Optional: Keep phase within a 0 to 2*PI range to prevent potential float precision issues over very long runtimes.
+            // if (ringPhase > 2.0f * (float)Math.PI) {
+            //     ringPhase -= 2.0f * (float)Math.PI;
+            // }
+
+            float currentRingAngleZ = ringMaxAngleZ * (float) Math.sin(ringPhase);
+            // Use a slightly different frequency or phase for the X-axis wobble to make it less uniform.
+            float currentRingAngleX = ringMaxAngleX * (float) Math.sin(ringPhase * 0.77f + (float)Math.PI / 3.0f);
+
+            // Apply rotations for the shake effect.
+            gl.glRotatef(currentRingAngleZ, 0.0f, 0.0f, 1.0f); // Shake around Z-axis (twist)
+            gl.glRotatef(currentRingAngleX, 1.0f, 0.0f, 0.0f); // Shake around X-axis (nod/rock)
         }
     }
 
