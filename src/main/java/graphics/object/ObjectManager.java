@@ -163,13 +163,18 @@ public class ObjectManager {
     public void renderAlarmClock(GLAutoDrawable glAutoDrawable) {
         GL2 gl = glAutoDrawable.getGL().getGL2();
 
-        if (animator.isActualTime()) {
+        if (animator.isPaused()) {
+            // Time is frozen if paused
+        } else if (animator.isActualTime()) {
             animator.getNow();
         } else {
-            if (animator.isSlowMotion()) {
-                animator.advanceTime(AlarmClockAnimator.SLOW_MOTION_SECONDS_PER_FRAME); // Use constant from animator
-            } else {
-                animator.advanceTime(AlarmClockAnimator.FAST_FORWARD_SECONDS_PER_FRAME); // Use constant from animator
+            // Not actualTime and not paused, so advance manually
+            if (animator.isResumingAtNormalRate()) {
+                animator.advanceTime(AlarmClockAnimator.NORMAL_SPEED_SECONDS_PER_FRAME);
+            } else if (animator.isSlowMotion()) {
+                animator.advanceTime(AlarmClockAnimator.SLOW_MOTION_SECONDS_PER_FRAME);
+            } else { // Default to Fast Forward
+                animator.advanceTime(AlarmClockAnimator.FAST_FORWARD_SECONDS_PER_FRAME);
             }
         }
 

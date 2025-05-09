@@ -102,13 +102,20 @@ public class AlarmClockRenderer implements IRenderer {
 
             boolean currentActualTime = objectManager.getAnimator().isActualTime();
             boolean currentSlowMotion = objectManager.getAnimator().isSlowMotion();
+            boolean currentPaused = objectManager.getAnimator().isPaused();
+            boolean currentResumingNormal = objectManager.getAnimator().isResumingAtNormalRate();
             String timeModeStr = "";
-            if (currentSlowMotion) {
-                timeModeStr = "Slow Motion";
-            } else if (!currentActualTime) {
-                timeModeStr = "Fast Forward";
-            } else {
+
+            if (currentPaused) {
+                timeModeStr = "Paused";
+            } else if (currentActualTime) {
                 timeModeStr = "Real Time";
+            } else if (currentResumingNormal) {
+                timeModeStr = "Real Time (Resumed)";
+            } else if (currentSlowMotion) {
+                timeModeStr = "Slow Motion";
+            } else { // Must be Fast Forward
+                timeModeStr = "Fast Forward";
             }
             textHUD.display(glAutoDrawable, width - 170, height - 40, timeModeStr);
         }
@@ -137,33 +144,49 @@ public class AlarmClockRenderer implements IRenderer {
             case KeyEvent.VK_1:
                 perspective = !perspective;
                 break;
-            case KeyEvent.VK_2: // Toggle Fast Forward / Real Time
-                if (objectManager.getAnimator().isActualTime() && !objectManager.getAnimator().isSlowMotion()) {
-                    // Currently Real Time, switch to Fast Forward
-                    objectManager.getAnimator().setActualTime(false);
-                    objectManager.getAnimator().setSlowMotion(false); 
-                } else {
-                    // Currently Fast Forward or Slow Motion, switch to Real Time
-                    objectManager.getAnimator().setActualTime(true);
-                    objectManager.getAnimator().setSlowMotion(false); 
-                }
-                break;
-            case KeyEvent.VK_3:
+            case KeyEvent.VK_2:
                 wireframe = !wireframe;
                 break;
-            case KeyEvent.VK_4:
-                info = !info;
+            case KeyEvent.VK_3: // Toggle Fast Forward / Real Time
+                if (objectManager.getAnimator().isActualTime() ||
+                    objectManager.getAnimator().isSlowMotion() ||
+                    objectManager.getAnimator().isResumingAtNormalRate()) {
+                    // If it's Real Time, Slow Motion, or Real Time (Resumed), switch to Fast Forward
+                    objectManager.getAnimator().setActualTime(false);
+                    objectManager.getAnimator().setSlowMotion(false);
+                    objectManager.getAnimator().setResumingAtNormalRate(false);
+                } else {
+                    // It must be Fast Forward (since actualTime, slowMotion, and resumingAtNormalRate are all false)
+                    // Switch to Real Time
+                    objectManager.getAnimator().setActualTime(true);
+                }
                 break;
-            case KeyEvent.VK_5: // Toggle Slow Motion / Real Time
+            case KeyEvent.VK_4: // Toggle Slow Motion / Real Time
                 if (objectManager.getAnimator().isSlowMotion()) {
                     // Currently Slow Motion, switch to Real Time
-                    objectManager.getAnimator().setActualTime(true);
-                    objectManager.getAnimator().setSlowMotion(false);
+                    objectManager.getAnimator().setActualTime(true); // Clears slowMotion and resumingAtNormalRate
                 } else {
-                    // Currently Real Time or Fast Forward, switch to Slow Motion
-                    objectManager.getAnimator().setActualTime(false); 
-                    objectManager.getAnimator().setSlowMotion(true);
+                    // Not Slow Motion (could be RealTime, FF, ResumingNormalRate), switch to Slow Motion
+                    objectManager.getAnimator().setSlowMotion(true); // Clears actualTime and resumingAtNormalRate
                 }
+                break;
+            case KeyEvent.VK_5: // Toggle Pause
+                boolean currentPausedState = objectManager.getAnimator().isPaused();
+                if (currentPausedState) { // Is currently paused, about to unpause
+                    if (objectManager.getAnimator().isActualTime()) {
+                        // Was in Real Time mode when paused.
+                        // To resume from paused time at normal rate:
+                        objectManager.getAnimator().setResumingAtNormalRate(true);
+                        // setResumingAtNormalRate(true) also sets actualTime=false and slowMotion=false in animator.
+                    }
+                    // If it was not actualTime (e.g., FF, SM, or already ResumingNormalRate) when paused,
+                    // unpausing will simply continue that mode. Animator flags are preserved during pause.
+                }
+                // Else (was not paused, about to pause): no mode change needed for pausing itself.
+                objectManager.getAnimator().setPaused(!currentPausedState);
+                break;
+            case KeyEvent.VK_6:
+                info = !info;
                 break;
             case KeyEvent.VK_R:
                 view.setDefaultPosition();

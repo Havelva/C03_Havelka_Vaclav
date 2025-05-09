@@ -8,14 +8,19 @@ public class AlarmClockAnimator {
 
     private LocalTime time;
     private boolean actualTime;
-    private boolean slowMotionActive; // New field for slow motion state
+    private boolean slowMotionActive;
+    private boolean isPaused;
+    private boolean resumingAtNormalRate; // New field
 
     static final double FAST_FORWARD_SECONDS_PER_FRAME = 1.0;
-    static final double SLOW_MOTION_SECONDS_PER_FRAME = 0.01; // Approx 5x slower at 60 FPS
+    static final double SLOW_MOTION_SECONDS_PER_FRAME = 0.01;
+    public static final double NORMAL_SPEED_SECONDS_PER_FRAME = 1.0 / 60.0; // Assuming 60 FPS target
 
     public AlarmClockAnimator() {
         this.actualTime = true;
         this.slowMotionActive = false;
+        this.isPaused = false;
+        this.resumingAtNormalRate = false; // Initialize new field
         // Time is initialized lazily
     }
 
@@ -24,14 +29,18 @@ public class AlarmClockAnimator {
     }
 
     public void getNow() {
-        time = LocalTime.now();
+        if (!isPaused) {
+            time = LocalTime.now();
+        }
     }
 
     public void advanceTime(double secondsDelta) {
         if (this.time == null) {
             getNow(); // Initialize if null
         }
-        this.time = this.time.plusNanos((long)(secondsDelta * 1_000_000_000L));
+        if (!isPaused) {
+            this.time = this.time.plusNanos((long)(secondsDelta * 1_000_000_000L));
+        }
     }
 
     public boolean isActualTime() {
@@ -40,14 +49,45 @@ public class AlarmClockAnimator {
 
     public void setActualTime(boolean actualTime) {
         this.actualTime = actualTime;
+        if (this.actualTime) {
+            // If switching to actual time, clear other manual modes
+            this.slowMotionActive = false;
+            this.resumingAtNormalRate = false;
+        }
     }
 
-    public boolean isSlowMotion() { // New getter
+    public boolean isSlowMotion() {
         return slowMotionActive;
     }
 
-    public void setSlowMotion(boolean slowMotionActive) { // New setter
+    public void setSlowMotion(boolean slowMotionActive) {
         this.slowMotionActive = slowMotionActive;
+        if (this.slowMotionActive) {
+            // If switching to slow motion, it's not actual time or resuming normal rate
+            this.actualTime = false;
+            this.resumingAtNormalRate = false;
+        }
+    }
+
+    public boolean isPaused() {
+        return isPaused;
+    }
+
+    public void setPaused(boolean paused) {
+        isPaused = paused;
+    }
+
+    public boolean isResumingAtNormalRate() {
+        return resumingAtNormalRate;
+    }
+
+    public void setResumingAtNormalRate(boolean resuming) {
+        this.resumingAtNormalRate = resuming;
+        if (this.resumingAtNormalRate) {
+            // If resuming at normal rate, it's not actual time or slow motion
+            this.actualTime = false;
+            this.slowMotionActive = false;
+        }
     }
 
     public void render(GL2 gl, Object object) {
