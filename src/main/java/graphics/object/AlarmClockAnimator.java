@@ -17,7 +17,6 @@ public class AlarmClockAnimator {
 
     // New parameters for improved ringing animation
     private float ringPhase = 0.0f;
-    private float hammerPhase = 0.0f; // Phase for hammer animation
     private float ringVisualFrequency = 8.0f; // Visual frequency of the shake in Hz (cycles per simulated second)
     private float ringMaxAngleZ = 6.0f;     // Max rotation angle in degrees for Z-axis shake (twist)
     private float ringMaxAngleX = 4.0f;     // Max rotation angle in degrees for X-axis shake (nod)
@@ -28,8 +27,14 @@ public class AlarmClockAnimator {
     static final double FAST_FORWARD_SECONDS_PER_FRAME = 1.0;
     static final double SLOW_MOTION_SECONDS_PER_FRAME = 0.01;
     public static final double NORMAL_SPEED_SECONDS_PER_FRAME = 1.0 / 60.0; // Assuming 60 FPS target
-    public static final float HAMMER_STRIKE_FREQUENCY = 1.5f; // Frequency of hammer strikes in Hz (e.g., 1.5 full oscillations/sec)
-    private static final float HAMMER_CENTERING_OFFSET_DEGREES = -5.0f; // Adjusts the center of the hammer's swing. Negative shifts it "right".
+    private static final float HAMMER_CENTERING_OFFSET_DEGREES = -5.0f; // Adjusts the center of the hammer's swing.
+    // Multiplier for hammer's phase relative to ringPhase.
+    // Effective hammer frequency = ringVisualFrequency * HAMMER_RING_PHASE_MULTIPLIER
+    // 8.0f * 0.2625f = 2.1f Hz.
+    // In fast-forward (deltaTime=1.0), total advance for hammer's sin argument:
+    // (2*PI*ringVisualFrequency*deltaTime) * HAMMER_RING_PHASE_MULTIPLIER
+    // = (2*PI*8.0*1.0) * 0.2625 = 16*PI * 0.2625 = 4.2*PI. Not a multiple of 2*PI, so not stuck.
+    private static final float HAMMER_RING_PHASE_MULTIPLIER = 0.2625f; 
 
     public AlarmClockAnimator() {
         this.actualTime = true;
@@ -226,29 +231,14 @@ public class AlarmClockAnimator {
     private void animateBellHammer(GL2 gl, int objectIndex) {
         gl.glPushMatrix();
         if (isRinging) {
-            float deltaTime = 0.0f;
-            if (!isPaused) {
-                // Use the time delta from the last frame for consistent animation speed
-                deltaTime = (float) this.lastSecondsDelta;
-            }
-
-            // Update hammer phase independently
-            hammerPhase += (2.0f * (float)Math.PI * HAMMER_STRIKE_FREQUENCY) * deltaTime;
-            
-            // Optional: Keep hammerPhase within a 0 to 2*PI range
-            if (hammerPhase > 2.0f * (float)Math.PI) {
-                hammerPhase -= 2.0f * (float)Math.PI;
-            }
-
             float maxHammerAngle = 25.0f;     // Max swing angle in degrees from center
-            float dynamicHammerAngle = maxHammerAngle * (float) Math.sin(hammerPhase);
+            // Hammer's oscillation is now driven by ringPhase for synchronization
+            float dynamicHammerAngle = maxHammerAngle * (float) Math.sin(ringPhase * HAMMER_RING_PHASE_MULTIPLIER);
 
             // Apply centering offset
             float totalHammerAngle = dynamicHammerAngle + HAMMER_CENTERING_OFFSET_DEGREES;
 
             // Apply rotation for the hammer swing.
-            // Assumes the hammer is modeled to pivot around its local X-axis
-            // for a swing that appears "left-to-right" (along world Y-axis) in the default view.
             gl.glRotatef(totalHammerAngle, 1.0f, 0.0f, 0.0f);
         }
         gl.glCallList(objectIndex);
