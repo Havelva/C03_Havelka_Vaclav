@@ -164,7 +164,13 @@ public class ObjectManager {
         GL2 gl = glAutoDrawable.getGL().getGL2();
 
         if (animator.isPaused()) {
-            // Time is frozen if paused
+            // Time is frozen if paused. Ensure 'time' is not null if it was never set.
+            if (animator.isActualTime() && animator.getTime() == null) { // Check if getTime() returns formatted string or actual LocalTime
+                 // This check might be tricky. Let's assume 'time' in animator is initialized by first call.
+                 // If animator.time is null and paused, getNow() to initialize.
+                 // A better way: ensure 'time' is initialized once.
+                 // The current logic in animator.getNow() and animator.advanceTime() handles lazy init.
+            }
         } else if (animator.isActualTime()) {
             animator.getNow();
         } else {
@@ -178,8 +184,15 @@ public class ObjectManager {
             }
         }
 
+        gl.glPushMatrix(); // Start a new matrix scope for the entire clock + ringing animation
+
+        // Apply global ringing transformation if active
+        animator.applyRingTransformation(gl);
+
         for (Object object : objects) {
             animator.render(gl, object);
         }
+
+        gl.glPopMatrix(); // Restore matrix, removing clock's + ringing transformations
     }
 }

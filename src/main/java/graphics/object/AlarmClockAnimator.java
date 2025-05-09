@@ -12,6 +12,11 @@ public class AlarmClockAnimator {
     private boolean isPaused;
     private boolean resumingAtNormalRate; // New field
 
+    // Ringing animation parameters
+    private boolean isRinging = false;
+    private float ringMaxAngle = 1.5f; // Max rotation angle in degrees for shake
+    private float ringFrequency = 15.0f; // Oscillations per second (Hz) for shake
+
     static final double FAST_FORWARD_SECONDS_PER_FRAME = 1.0;
     static final double SLOW_MOTION_SECONDS_PER_FRAME = 0.01;
     public static final double NORMAL_SPEED_SECONDS_PER_FRAME = 1.0 / 60.0; // Assuming 60 FPS target
@@ -22,6 +27,7 @@ public class AlarmClockAnimator {
         this.isPaused = false;
         this.resumingAtNormalRate = false; // Initialize new field
         // Time is initialized lazily
+        // Ringing is off by default
     }
 
     public String getTime() {
@@ -31,6 +37,11 @@ public class AlarmClockAnimator {
     public void getNow() {
         if (!isPaused) {
             time = LocalTime.now();
+            // If time was null and we just set it, and we are resuming, ensure resumingAtNormalRate is false
+            // to avoid advancing time immediately after getting LocalTime.now() if unpausing to real time.
+            // This logic is subtle. If unpausing to "Real Time (Resumed)", advanceTime is called.
+            // If unpausing to "Real Time", getNow() is called.
+            // This should be fine as is.
         }
     }
 
@@ -87,6 +98,31 @@ public class AlarmClockAnimator {
             // If resuming at normal rate, it's not actual time or slow motion
             this.actualTime = false;
             this.slowMotionActive = false;
+        }
+    }
+
+    public boolean isRinging() {
+        return isRinging;
+    }
+
+    public void setRinging(boolean ringing) {
+        isRinging = ringing;
+    }
+
+    /**
+     * Applies a global transformation for the ringing animation if active.
+     * This should be called within a glPushMatrix/glPopMatrix block.
+     * @param gl The GL2 context.
+     */
+    public void applyRingTransformation(GL2 gl) {
+        if (isRinging && time != null) {
+            // Calculate oscillation based on current time (seconds + nanoseconds part)
+            // This makes the shake continuous and respects pause/FF/SM
+            double totalSecondsInCurrentSecond = time.getSecond() + time.getNano() * 1e-9;
+            float currentRingAngle = ringMaxAngle * (float) Math.sin(totalSecondsInCurrentSecond * 2.0 * Math.PI * ringFrequency);
+
+            // Apply a rotation for the shake effect. Shaking around Z-axis (twist).
+            gl.glRotatef(currentRingAngle, 0.0f, 0.0f, 1.0f);
         }
     }
 

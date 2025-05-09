@@ -118,6 +118,9 @@ public class AlarmClockRenderer implements IRenderer {
                 timeModeStr = "Fast Forward";
             }
             textHUD.display(glAutoDrawable, width - 170, height - 40, timeModeStr);
+            // Display ringing status
+            String ringingStatus = "Ringing: " + (objectManager.getAnimator().isRinging() ? "ON" : "OFF");
+            textHUD.display(glAutoDrawable, width - 170, height - 60, ringingStatus);
         }
     }
 
@@ -193,6 +196,9 @@ public class AlarmClockRenderer implements IRenderer {
                 break;
             case KeyEvent.VK_6:
                 info = !info;
+                break;
+            case KeyEvent.VK_7: // Toggle ringing
+                objectManager.getAnimator().setRinging(!objectManager.getAnimator().isRinging());
                 break;
             case KeyEvent.VK_R:
                 view.setDefaultPosition();
