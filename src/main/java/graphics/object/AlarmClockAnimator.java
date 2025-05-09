@@ -8,9 +8,15 @@ public class AlarmClockAnimator {
 
     private LocalTime time;
     private boolean actualTime;
+    private boolean slowMotionActive; // New field for slow motion state
+
+    static final double FAST_FORWARD_SECONDS_PER_FRAME = 1.0;
+    static final double SLOW_MOTION_SECONDS_PER_FRAME = 0.01; // Approx 5x slower at 60 FPS
 
     public AlarmClockAnimator() {
-        actualTime = true;
+        this.actualTime = true;
+        this.slowMotionActive = false;
+        // Time is initialized lazily
     }
 
     public String getTime() {
@@ -21,8 +27,11 @@ public class AlarmClockAnimator {
         time = LocalTime.now();
     }
 
-    public void plus(int i) {
-        time = time.plusSeconds(i);
+    public void advanceTime(double secondsDelta) {
+        if (this.time == null) {
+            getNow(); // Initialize if null
+        }
+        this.time = this.time.plusNanos((long)(secondsDelta * 1_000_000_000L));
     }
 
     public boolean isActualTime() {
@@ -31,6 +40,14 @@ public class AlarmClockAnimator {
 
     public void setActualTime(boolean actualTime) {
         this.actualTime = actualTime;
+    }
+
+    public boolean isSlowMotion() { // New getter
+        return slowMotionActive;
+    }
+
+    public void setSlowMotion(boolean slowMotionActive) { // New setter
+        this.slowMotionActive = slowMotionActive;
     }
 
     public void render(GL2 gl, Object object) {

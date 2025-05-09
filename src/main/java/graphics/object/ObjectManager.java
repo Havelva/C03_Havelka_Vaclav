@@ -163,10 +163,14 @@ public class ObjectManager {
     public void renderAlarmClock(GLAutoDrawable glAutoDrawable) {
         GL2 gl = glAutoDrawable.getGL().getGL2();
 
-        if (animator.isActualTime())
+        if (animator.isActualTime()) {
             animator.getNow();
-        else {
-            animator.plus(1);
+        } else {
+            if (animator.isSlowMotion()) {
+                animator.advanceTime(AlarmClockAnimator.SLOW_MOTION_SECONDS_PER_FRAME); // Use constant from animator
+            } else {
+                animator.advanceTime(AlarmClockAnimator.FAST_FORWARD_SECONDS_PER_FRAME); // Use constant from animator
+            }
         }
 
         for (Object object : objects) {

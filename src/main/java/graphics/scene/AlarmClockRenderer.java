@@ -26,7 +26,6 @@ public class AlarmClockRenderer implements IRenderer {
     private int ax, ay;
 
     private boolean perspective;
-    private boolean actualTime;
     private boolean wireframe;
     private boolean info;
     private boolean ctrl;
@@ -39,7 +38,6 @@ public class AlarmClockRenderer implements IRenderer {
         objectManager = new ObjectManager();
 
         perspective = false;
-        actualTime = true;
         wireframe = false;
         info = true;
         ctrl = false;
@@ -101,6 +99,18 @@ public class AlarmClockRenderer implements IRenderer {
             textHUD.display(glAutoDrawable, 4, height - 20, String.format("FPS: %.0f", fps));
             textHUD.display(glAutoDrawable, width - 170, height - 20, objectManager.getAnimator().getTime());
             textHUD.display(glAutoDrawable, 4, 8, (perspective) ? "Perspective" : "Orthographic");
+
+            boolean currentActualTime = objectManager.getAnimator().isActualTime();
+            boolean currentSlowMotion = objectManager.getAnimator().isSlowMotion();
+            String timeModeStr = "";
+            if (currentSlowMotion) {
+                timeModeStr = "Slow Motion";
+            } else if (!currentActualTime) {
+                timeModeStr = "Fast Forward";
+            } else {
+                timeModeStr = "Real Time";
+            }
+            textHUD.display(glAutoDrawable, width - 170, height - 40, timeModeStr);
         }
     }
 
@@ -127,15 +137,33 @@ public class AlarmClockRenderer implements IRenderer {
             case KeyEvent.VK_1:
                 perspective = !perspective;
                 break;
-            case KeyEvent.VK_2:
-                actualTime = !actualTime;
-                objectManager.getAnimator().setActualTime(actualTime);
+            case KeyEvent.VK_2: // Toggle Fast Forward / Real Time
+                if (objectManager.getAnimator().isActualTime() && !objectManager.getAnimator().isSlowMotion()) {
+                    // Currently Real Time, switch to Fast Forward
+                    objectManager.getAnimator().setActualTime(false);
+                    objectManager.getAnimator().setSlowMotion(false); 
+                } else {
+                    // Currently Fast Forward or Slow Motion, switch to Real Time
+                    objectManager.getAnimator().setActualTime(true);
+                    objectManager.getAnimator().setSlowMotion(false); 
+                }
                 break;
             case KeyEvent.VK_3:
                 wireframe = !wireframe;
                 break;
             case KeyEvent.VK_4:
                 info = !info;
+                break;
+            case KeyEvent.VK_5: // Toggle Slow Motion / Real Time
+                if (objectManager.getAnimator().isSlowMotion()) {
+                    // Currently Slow Motion, switch to Real Time
+                    objectManager.getAnimator().setActualTime(true);
+                    objectManager.getAnimator().setSlowMotion(false);
+                } else {
+                    // Currently Real Time or Fast Forward, switch to Slow Motion
+                    objectManager.getAnimator().setActualTime(false); 
+                    objectManager.getAnimator().setSlowMotion(true);
+                }
                 break;
             case KeyEvent.VK_R:
                 view.setDefaultPosition();
