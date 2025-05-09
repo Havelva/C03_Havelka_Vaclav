@@ -148,6 +148,9 @@ public class AlarmClockRenderer implements IRenderer {
                 wireframe = !wireframe;
                 break;
             case KeyEvent.VK_3: // Toggle Fast Forward / Real Time
+                if (objectManager.getAnimator().isPaused()) {
+                    break; // Do nothing if paused
+                }
                 if (objectManager.getAnimator().isActualTime() ||
                     objectManager.getAnimator().isSlowMotion() ||
                     objectManager.getAnimator().isResumingAtNormalRate()) {
@@ -162,6 +165,9 @@ public class AlarmClockRenderer implements IRenderer {
                 }
                 break;
             case KeyEvent.VK_4: // Toggle Slow Motion / Real Time
+                if (objectManager.getAnimator().isPaused()) {
+                    break; // Do nothing if paused
+                }
                 if (objectManager.getAnimator().isSlowMotion()) {
                     // Currently Slow Motion, switch to Real Time
                     objectManager.getAnimator().setActualTime(true); // Clears slowMotion and resumingAtNormalRate
