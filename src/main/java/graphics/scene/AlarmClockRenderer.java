@@ -29,6 +29,7 @@ public class AlarmClockRenderer implements IRenderer {
     private boolean wireframe;
     private boolean info;
     private boolean ctrl;
+    private boolean showHelp; // Added for help screen
 
     public AlarmClockRenderer() {
         glu = new GLU();
@@ -41,6 +42,7 @@ public class AlarmClockRenderer implements IRenderer {
         wireframe = false;
         info = true;
         ctrl = false;
+        showHelp = false; // Initialize showHelp
     }
 
     @Override
@@ -95,8 +97,39 @@ public class AlarmClockRenderer implements IRenderer {
 
         objectManager.renderAlarmClock(glAutoDrawable);
 
-        if (info) {
+        if (showHelp) {
+            // Display Help Text
+            String[] helpLines = {
+                "Controls:",
+                "H: Toggle Help",
+                "1: Toggle Perspective / Orthographic View",
+                "2: Toggle Wireframe / Solid Mode",
+                "3: Toggle Fast Forward / Real Time",
+                "4: Toggle Slow Motion / Real Time",
+                "5: Toggle Pause / Resume",
+                "6: Toggle Info Display (FPS, Time, etc.)",
+                "7: Toggle Alarm Ringing",
+                "R: Reset View & Light Position",
+                "",
+                "Mouse:",
+                "Left Drag: Rotate Camera",
+                "Right Drag (or other button drag): Rotate Light",
+                "CTRL + Vertical Drag: Zoom Camera"
+            };
+            int lineHeight = 22; // Approximate line height
+            int startX = 20;
+            int startY = height - 30; // Start from top-left
+
+            for (String line : helpLines) {
+                if (startY < 0) break; // Stop if text goes off screen
+                textHUD.display(glAutoDrawable, startX, startY, line);
+                startY -= lineHeight;
+            }
+        } else if (info) {
             textHUD.display(glAutoDrawable, 4, height - 20, String.format("FPS: %.0f", fps));
+            // Display "Press H for Controls" under FPS
+            textHUD.display(glAutoDrawable, 4, height - 20 - 22, "Press 'H' for Controls"); 
+
             textHUD.display(glAutoDrawable, width - 170, height - 20, objectManager.getAnimator().getTime());
             textHUD.display(glAutoDrawable, 4, 8, (perspective) ? "Perspective" : "Orthographic");
 
@@ -121,6 +154,8 @@ public class AlarmClockRenderer implements IRenderer {
             // Display ringing status
             String ringingStatus = "Ringing: " + (objectManager.getAnimator().isRinging() ? "ON" : "OFF");
             textHUD.display(glAutoDrawable, width - 170, height - 60, ringingStatus);
+            
+            textHUD.display(glAutoDrawable, width - 364, 8, "Václav Havelka - PGRF2 (2025)"); 
         }
     }
 
@@ -199,6 +234,9 @@ public class AlarmClockRenderer implements IRenderer {
                 break;
             case KeyEvent.VK_7: // Toggle ringing
                 objectManager.getAnimator().setRinging(!objectManager.getAnimator().isRinging());
+                break;
+            case KeyEvent.VK_H: // Toggle help screen
+                showHelp = !showHelp;
                 break;
             case KeyEvent.VK_R:
                 view.setDefaultPosition();
