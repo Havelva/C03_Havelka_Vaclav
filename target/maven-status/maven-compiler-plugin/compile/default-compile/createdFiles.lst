@@ -1,0 +1,17 @@
+graphics/scene/IRenderer.class
+graphics/scene/Position.class
+graphics/Main$1.class
+graphics/utils/Resources.class
+graphics/utils/ResourceType.class
+graphics/utils/Resources$1.class
+graphics/scene/AlarmClockRenderer.class
+graphics/Main.class
+graphics/utils/TextHUD.class
+graphics/scene/Lighting.class
+graphics/object/Face.class
+graphics/object/Object.class
+graphics/object/Vector.class
+graphics/object/Material.class
+graphics/object/ObjectManager.class
+graphics/scene/View.class
+graphics/object/AlarmClockAnimator.class
